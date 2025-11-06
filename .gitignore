@@ -23,5 +23,9 @@ override.tf.json
 .terraformrc
 terraform.rc
 
+# Ignore plan
+*.tfplan
+*.tfplan.*
+
 #IDE
 .idea
