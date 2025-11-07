@@ -2,7 +2,7 @@
 terraform {
   required_providers {
     aws = {
-      source = "hashicorp/aws"
+      source  = "hashicorp/aws"
       version = "~> 5.0"
     }
   }
@@ -20,7 +20,7 @@ data "aws_ssm_parameter" "ubuntu" {
 
 # Resource takes to parameters: Resource type (aws_vpc) and name label (app).
 resource "aws_vpc" "app" {
-  cidr_block = var.vpc_cipr_block
+  cidr_block           = var.vpc_cipr_block
   enable_dns_hostnames = true
 }
 
@@ -30,9 +30,9 @@ resource "aws_internet_gateway" "app" {
 }
 
 resource "aws_subnet" "public_subnet1" {
-  cidr_block = var.subnet_cidr_block
-  vpc_id = aws_vpc.app.id
-  availability_zone = "us-east-1a"
+  cidr_block              = var.subnet_cidr_block
+  vpc_id                  = aws_vpc.app.id
+  availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
 }
 
@@ -47,51 +47,51 @@ resource "aws_route_table" "app" {
 }
 
 resource "aws_route_table_association" "app_subnet1" {
-  subnet_id = aws_subnet.public_subnet1.id
+  subnet_id      = aws_subnet.public_subnet1.id
   route_table_id = aws_route_table.app.id
 }
 
 #security groups
 resource "aws_security_group" "apache_sg" {
-  name = "apache_sg"
+  name   = "apache_sg"
   vpc_id = aws_vpc.app.id
 
   #http access
   ingress {
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
+    from_port   = var.ingress_inbound_http
+    to_port     = var.ingress_inbound_http
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   #ssh access
   ingress {
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # Or restrict to your IP
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Or restrict to your IP
   }
 
   egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
 resource "aws_key_pair" "terraform_key" {
   key_name   = "terraform-key"
-  public_key = file("~/.ssh/terraform_key.pub")  # Reads the public key
+  public_key = file("~/.ssh/terraform_key.pub") # Reads the public key
 }
 
 # Nonsensitive function removes sensitive values and allows us to use the value here.
 resource "aws_instance" "ubuntu" {
-  ami = nonsensitive(data.aws_ssm_parameter.ubuntu.value)
-  instance_type = "t3.micro"
-  subnet_id = aws_subnet.public_subnet1.id
-  vpc_security_group_ids = [aws_security_group.apache_sg.id]
-  key_name = aws_key_pair.terraform_key.key_name
+  ami                         = nonsensitive(data.aws_ssm_parameter.ubuntu.value)
+  instance_type               = var.instance_type
+  subnet_id                   = aws_subnet.public_subnet1.id
+  vpc_security_group_ids      = [aws_security_group.apache_sg.id]
+  key_name                    = aws_key_pair.terraform_key.key_name
   user_data_replace_on_change = true
 
   user_data = <<EOF
