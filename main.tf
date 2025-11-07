@@ -10,7 +10,7 @@ terraform {
 
 # Arguments for provider: Region, credentials, etc...
 provider "aws" {
-  region = "us-east-1"
+  region = var.aws_region
 }
 
 # A way to query information from a platorm or service. Similar to resources.
@@ -20,7 +20,7 @@ data "aws_ssm_parameter" "ubuntu" {
 
 # Resource takes to parameters: Resource type (aws_vpc) and name label (app).
 resource "aws_vpc" "app" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block = var.vpc_cipr_block
   enable_dns_hostnames = true
 }
 
@@ -30,7 +30,7 @@ resource "aws_internet_gateway" "app" {
 }
 
 resource "aws_subnet" "public_subnet1" {
-  cidr_block = "10.0.0.0/24"
+  cidr_block = var.subnet_cidr_block
   vpc_id = aws_vpc.app.id
   availability_zone = "us-east-1a"
   map_public_ip_on_launch = true
@@ -96,10 +96,11 @@ resource "aws_instance" "ubuntu" {
 
   user_data = <<EOF
 #! /bin/bash
-sudo apt-get update
+sudo apt update
 sudo apt install apache2 -y
 sudo systemctl start apache2
-sudo cat > /var/www/html/index.html << 'WEBSITE
+sudo systemctl enable apache2
+sudo cat > /var/www/html/index.html << WEBSITE
 <html>
 <head>
   <title>From the edge of the Jellobelt</title>
