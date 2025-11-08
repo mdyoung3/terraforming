@@ -19,21 +19,27 @@ data "aws_ssm_parameter" "ubuntu" {
 }
 
 # Resource takes to parameters: Resource type (aws_vpc) and name label (app).
+# This is networking
 resource "aws_vpc" "app" {
   cidr_block           = var.vpc_cipr_block
   enable_dns_hostnames = true
+  tags                 = merge(local.common_tags, {Name = lower("${local.prefix}-vpc")})
 }
 
 # vpc_id references the above resource
 resource "aws_internet_gateway" "app" {
   vpc_id = aws_vpc.app.id
+
+  tags = local.common_tags
 }
 
 resource "aws_subnet" "public_subnet1" {
   cidr_block              = var.subnet_cidr_block
   vpc_id                  = aws_vpc.app.id
   availability_zone       = "us-east-1a"
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = var.public_ip_on_launch
+
+  tags = local.common_tags
 }
 
 # Routing
@@ -78,6 +84,8 @@ resource "aws_security_group" "apache_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = local.common_tags
 }
 
 resource "aws_key_pair" "terraform_key" {
@@ -93,22 +101,7 @@ resource "aws_instance" "ubuntu" {
   vpc_security_group_ids      = [aws_security_group.apache_sg.id]
   key_name                    = aws_key_pair.terraform_key.key_name
   user_data_replace_on_change = true
+  user_data = templatefile("templates/startup_script.tpl", { environment = var.environment })
 
-  user_data = <<EOF
-#! /bin/bash
-sudo apt update
-sudo apt install apache2 -y
-sudo systemctl start apache2
-sudo systemctl enable apache2
-sudo cat > /var/www/html/index.html << WEBSITE
-<html>
-<head>
-  <title>From the edge of the Jellobelt</title>
-</head>
-<body>
-  <p style="text-align:center;">Welcome to the Edge of the Jellobelt</p>
-</body>
-</html>
-WEBSITE
-EOF
+  tags                 = merge(local.common_tags, {Name = lower("${local.prefix}-ec2")})
 }

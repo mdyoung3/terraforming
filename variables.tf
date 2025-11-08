@@ -25,3 +25,36 @@ variable "instance_type" {
   type        = string
   description = "Sets the instance for this resource"
 }
+
+variable "public_ip_on_launch" {
+  type        = bool
+  description = "sets the boolean value for mapping of public ip"
+  default     = true
+}
+
+variable "company_name" {
+  type        = string
+  description = "Name of the company"
+  default     = "jellobelt"
+}
+
+variable "project" {
+  type        = string
+  description = "The name of the project"
+}
+
+variable "environment" {
+  type        = string
+  description = "The environment for deploying (dev, test, prod)"
+}
+
+variable "billing_code" {
+  type        = string
+  description = "The billing code of the project"
+}
+
+variable "protocol" {
+  type        = string
+  description = "The protocol (http or https) the resource can connect to"
+  default     = "http"
+}
