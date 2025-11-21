@@ -8,14 +8,29 @@ terraform {
   }
 }
 
+# A way to query information from a platorm or service. Similar to resources.
+data "aws_ssm_parameter" "ubuntu" {
+  name = "/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id"
+}
+
 # Arguments for provider: Region, credentials, etc...
 provider "aws" {
   region = var.aws_region
 }
 
-# A way to query information from a platorm or service. Similar to resources.
-data "aws_ssm_parameter" "ubuntu" {
-  name = "/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id"
+module "public_subnet_1" {
+  source = "./modules/subnet"
+
+  subnet_cidr_block   = "10.0.1.0/24"
+  vpc_id              = aws_vpc.app.id
+  availability_zone   = "us-east-1a"
+  public_ip_on_launch = true
+  subnet_name         = "public-subnet-1"
+
+  tags = {
+    Environment = "dev"
+    Project     = "webapp"
+  }
 }
 
 # Resource takes to parameters: Resource type (aws_vpc) and name label (app).
@@ -29,15 +44,6 @@ resource "aws_vpc" "app" {
 # vpc_id references the above resource
 resource "aws_internet_gateway" "app" {
   vpc_id = aws_vpc.app.id
-
-  tags = local.common_tags
-}
-
-resource "aws_subnet" "public_subnet1" {
-  cidr_block              = var.subnet_cidr_block
-  vpc_id                  = aws_vpc.app.id
-  availability_zone       = "us-east-1a"
-  map_public_ip_on_launch = var.public_ip_on_launch
 
   tags = local.common_tags
 }
@@ -97,7 +103,8 @@ resource "aws_key_pair" "terraform_key" {
 resource "aws_instance" "ubuntu" {
   ami                         = nonsensitive(data.aws_ssm_parameter.ubuntu.value)
   instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.public_subnet1.id
+  subnet_id = module.public_subnet_1.subnet_id
+  # subnet_id                   = aws_subnet.public_subnet1.id
   vpc_security_group_ids      = [aws_security_group.apache_sg.id]
   key_name                    = aws_key_pair.terraform_key.key_name
   user_data_replace_on_change = true
